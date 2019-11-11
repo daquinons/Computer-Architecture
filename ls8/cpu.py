@@ -97,3 +97,6 @@ class CPU:
 
             elif ir[-1] == 0b00000001:  # HLT
                 self.running = False
+
+            else:
+                raise Exception("Unknown instruction")
