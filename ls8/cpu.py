@@ -8,7 +8,7 @@ class CPU:
 
     def __init__(self):
         """Construct a new CPU."""
-        self.ram = [0] * 8
+        self.ram = []
         self.reg = [0] * 8
         self.pc = 0
         self.running = False
@@ -19,7 +19,7 @@ class CPU:
         address = 0
 
         for instruction in program:
-            self.ram[address] = instruction
+            self.ram.append(instruction)
             address += 1
 
     def ram_read(self, address):
@@ -33,9 +33,12 @@ class CPU:
 
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-        # elif op == "SUB": etc
+        elif op == "MUL":
+            self.reg[reg_a] *= self.reg[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
+
+        self.pc += 3
 
     def ldi(self, reg_a, reg_b):
         """LDI operation to store a variable in register."""
@@ -86,5 +89,8 @@ class CPU:
             elif ir[-1] == 0b00000001:  # HLT
                 self.running = False
 
+            elif ir[-1] == 0b10100010:  # MUL
+                self.alu("MUL", self.ram_read(self.pc + 1),
+                         self.ram_read(self.pc + 2))
             else:
                 raise Exception("Unknown instruction")
