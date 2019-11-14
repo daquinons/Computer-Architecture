@@ -2,16 +2,33 @@
 
 import sys
 
+# Operations Definitions
+LDI = 0b10000010
+PRN = 0b01000111
+HLT = 0b00000001
+MUL = 0b10100010
+PUSH = 0b01000101
+POP = 0b01000110
+
 
 class CPU:
     """Main CPU class."""
 
     def __init__(self):
         """Construct a new CPU."""
-        self.ram = []
+        self.ram = [0] * 256
         self.reg = [0] * 8
         self.pc = 0
+        self.SP = 7  #  Stack Pointer
         self.running = False
+        # Operations setup
+        self.operations = {}
+        self.operations[LDI] = self.ldi
+        self.operations[PRN] = self.prn
+        self.operations[HLT] = self.hlt
+        self.operations[MUL] = self.mul
+        self.operations[PUSH] = self.stack_push
+        self.operations[POP] = self.stack_pop
 
     def load(self, program):
         """Load a program into memory."""
@@ -19,7 +36,7 @@ class CPU:
         address = 0
 
         for instruction in program:
-            self.ram.append(instruction)
+            self.ram[address] = instruction
             address += 1
 
     def ram_read(self, address):
@@ -27,6 +44,18 @@ class CPU:
 
     def ram_write(self, address, value):
         self.ram[address] = value
+
+    def stack_push(self):
+        value = self.reg[self.ram_read(self.pc + 1)]
+        self.reg[self.SP] -= 1
+        self.ram_write(self.reg[self.SP], value)
+        self.pc += 2
+
+    def stack_pop(self):
+        value = self.ram_read(self.reg[self.SP])
+        self.reg[self.ram_read(self.pc + 1)] = value
+        self.reg[self.SP] += 1
+        self.pc += 2
 
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
@@ -40,17 +69,25 @@ class CPU:
 
         self.pc += 3
 
-    def ldi(self, reg_a, reg_b):
-        """LDI operation to store a variable in register."""
+    def mul(self):
+        self.alu("MUL", self.ram_read(self.pc + 1),
+                 self.ram_read(self.pc + 2))
 
+    def ldi(self):
+        """LDI operation to store a variable in register."""
+        reg_a = self.ram_read(self.pc + 1)
+        reg_b = self.ram_read(self.pc + 2)
         self.reg[reg_a] = reg_b
         self.pc += 3
 
-    def prn(self, reg_a):
+    def prn(self):
         """Print operation."""
-
+        reg_a = self.ram_read(self.pc + 1)
         print(self.reg[reg_a])
         self.pc += 2
+
+    def hlt(self):
+        self.running = False
 
     def trace(self):
         """
@@ -78,19 +115,8 @@ class CPU:
         self.running = True
         while self.running:
             ir.append(self.ram_read(self.pc))
-
-            if ir[-1] == 0b10000010:  # LDI
-                self.ldi(self.ram_read(self.pc + 1),
-                         self.ram_read(self.pc + 2))
-
-            elif ir[-1] == 0b01000111:  # PRN
-                self.prn(self.ram_read(self.pc + 1))
-
-            elif ir[-1] == 0b00000001:  # HLT
-                self.running = False
-
-            elif ir[-1] == 0b10100010:  # MUL
-                self.alu("MUL", self.ram_read(self.pc + 1),
-                         self.ram_read(self.pc + 2))
-            else:
+            current_operation = ir[-1]
+            try:
+                self.operations[current_operation]()
+            except:
                 raise Exception("Unknown instruction")
