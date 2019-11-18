@@ -9,6 +9,8 @@ HLT = 0b00000001
 MUL = 0b10100010
 PUSH = 0b01000101
 POP = 0b01000110
+CALL = 0b01010000
+RET = 0b00010001
 
 
 class CPU:
@@ -29,6 +31,8 @@ class CPU:
         self.operations[MUL] = self.mul
         self.operations[PUSH] = self.stack_push
         self.operations[POP] = self.stack_pop
+        self.operations[CALL] = self.call
+        self.operations[RET] = self.ret
 
     def load(self, program):
         """Load a program into memory."""
@@ -88,6 +92,16 @@ class CPU:
 
     def hlt(self):
         self.running = False
+
+    def call(self):
+        self.reg[self.SP] -= 1
+        self.ram[self.reg[self.SP]] = self.pc + 2
+
+        self.pc = self.reg[self.ram[self.pc + 1]]
+
+    def ret(self):
+        self.pc = self.ram[self.reg[self.SP]]
+        self.reg[self.SP] += 1
 
     def trace(self):
         """
